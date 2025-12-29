@@ -544,11 +544,10 @@
             for (let y = 0; y < mapCanvas.height; y += mapCanvas.height / 8) {
                 mapCtx.beginPath();
                 mapCtx.moveTo(0, y);
-                // Add slight curve to simulate map projection
-                for (let x = 0; x < mapCanvas.width; x += 20) {
-                    const curve = Math.sin((x / mapCanvas.width) * Math.PI) * 5;
-                    mapCtx.lineTo(x, y + curve);
-                }
+                // Add slight curve to simulate map projection using quadratic curve
+                const midX = mapCanvas.width / 2;
+                const curve = 5; // Curve height
+                mapCtx.quadraticCurveTo(midX, y + curve, mapCanvas.width, y);
                 mapCtx.stroke();
             }
             
