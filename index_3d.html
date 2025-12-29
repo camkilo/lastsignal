@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LastSignal - 3D Digital Reality Game</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000000;
+            color: #00ff00;
+            overflow: hidden;
+        }
+        
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        
+        #ui-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+        }
+        
+        .ui-panel {
+            pointer-events: auto;
+            background: rgba(0, 0, 0, 0.85);
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+            backdrop-filter: blur(10px);
+        }
+        
+        #header {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 3em;
+            text-shadow: 0 0 20px #00ff00;
+            animation: pulse 2s infinite;
+            margin-bottom: 10px;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; text-shadow: 0 0 20px #00ff00; }
+            50% { opacity: 0.7; text-shadow: 0 0 40px #00ff00; }
+        }
+        
+        #game-status {
+            position: absolute;
+            top: 150px;
+            right: 20px;
+            width: 300px;
+        }
+        
+        #info-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 400px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        #controls {
+            position: absolute;
+            top: 150px;
+            left: 20px;
+            width: 300px;
+        }
+        
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            padding: 5px;
+            border-left: 3px solid #00ff00;
+            padding-left: 10px;
+        }
+        
+        .stat-label {
+            color: #00ffff;
+        }
+        
+        .stat-value {
+            color: #00ff00;
+            font-weight: bold;
+        }
+        
+        .timer {
+            font-size: 2.5em;
+            color: #ff0000;
+            text-align: center;
+            text-shadow: 0 0 10px #ff0000;
+            margin: 15px 0;
+        }
+        
+        button {
+            background: rgba(0, 255, 0, 0.2);
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            padding: 12px 24px;
+            font-family: 'Courier New', monospace;
+            font-size: 1em;
+            cursor: pointer;
+            border-radius: 5px;
+            margin: 5px;
+            transition: all 0.3s;
+            width: 100%;
+        }
+        
+        button:hover {
+            background: rgba(0, 255, 0, 0.4);
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.7);
+            transform: scale(1.05);
+        }
+        
+        button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .info-fragment {
+            background: rgba(0, 0, 100, 0.3);
+            border: 1px solid #0088ff;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            position: relative;
+        }
+        
+        .info-type {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            margin-bottom: 5px;
+        }
+        
+        .info-type.truth { background: #00ff00; color: #000; }
+        .info-type.lie { background: #ff0000; color: #fff; }
+        .info-type.corrupted { background: #ff00ff; color: #fff; }
+        
+        .faction-node {
+            background: rgba(0, 50, 0, 0.5);
+            border: 2px solid #00ff00;
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .faction-node:hover {
+            background: rgba(0, 100, 0, 0.7);
+            transform: translateX(5px);
+        }
+        
+        .faction-name {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #00ff00;
+        }
+        
+        .faction-state {
+            color: #ffff00;
+            font-size: 0.9em;
+        }
+        
+        .faction-state.aggressive { color: #ff0000; }
+        .faction-state.zealous { color: #ff00ff; }
+        .faction-state.crashed { color: #666666; }
+        .faction-state.allied { color: #00ffff; }
+        
+        #model-upload {
+            margin: 15px 0;
+            padding: 15px;
+            border: 2px dashed #00ff00;
+            border-radius: 5px;
+            text-align: center;
+        }
+        
+        #model-upload input[type="file"] {
+            display: none;
+        }
+        
+        #model-upload label {
+            cursor: pointer;
+            color: #00ffff;
+            text-decoration: underline;
+        }
+        
+        .event-item {
+            padding: 8px;
+            margin: 5px 0;
+            border-left: 3px solid #00ff00;
+            padding-left: 10px;
+            font-size: 0.9em;
+            animation: fadeIn 0.5s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        .scrollable {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.5);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #00ff00;
+            border-radius: 4px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        #loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2em;
+            text-align: center;
+            z-index: 100;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(0, 255, 0, 0.1);
+            border-left: 4px solid #00ff00;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    
+    <div id="ui-overlay">
+        <div id="header" class="ui-panel">
+            <h1>LASTSIGNAL</h1>
+            <p style="color: #00ccff;">3D Digital Reality - Control Information, Dominate Reality</p>
+        </div>
+        
+        <div id="game-status" class="ui-panel">
+            <h3>SYSTEM STATUS</h3>
+            <div class="stat-row">
+                <span class="stat-label">Round:</span>
+                <span class="stat-value" id="round-num">0</span>
+            </div>
+            <div class="timer" id="timer">03:00</div>
+            <div class="stat-row">
+                <span class="stat-label">Your Influence:</span>
+                <span class="stat-value" id="influence">0.0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Actions Taken:</span>
+                <span class="stat-value" id="actions">0</span>
+            </div>
+            
+            <button onclick="processRound()" id="process-btn">
+                [PROCESS ROUND]
+            </button>
+            
+            <div id="model-upload">
+                <p style="color: #00ffff; margin-bottom: 10px;">
+                    <strong>Custom 3D Models</strong>
+                </p>
+                <input type="file" id="glb-upload" accept=".glb,.gltf" onchange="loadCustomModel(event)">
+                <label for="glb-upload">📦 Upload GLB/GLTF Model</label>
+                <p style="font-size: 0.8em; margin-top: 5px; color: #888;">
+                    Replace default nodes with your models
+                </p>
+            </div>
+        </div>
+        
+        <div id="controls" class="ui-panel">
+            <h3>FACTIONS</h3>
+            <div id="factions-list" class="scrollable"></div>
+        </div>
+        
+        <div id="info-panel" class="ui-panel">
+            <h3>SECRET DATA FRAGMENTS</h3>
+            <div id="info-fragments" class="scrollable"></div>
+            
+            <h3 style="margin-top: 20px;">RECENT EVENTS</h3>
+            <div id="events-log" class="scrollable"></div>
+        </div>
+    </div>
+    
+    <div id="loading">
+        <div>INITIALIZING DIGITAL REALM...</div>
+        <div class="spinner"></div>
+    </div>
+
+    <script>
+        // Three.js 3D Scene Setup
+        let scene, camera, renderer, controls;
+        let factionNodes = {};
+        let informationParticles = [];
+        let customModels = {};
+        
+        function initThreeJS() {
+            // Scene setup
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x000000, 0.002);
+            
+            // Camera setup
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 5, 15);
+            
+            // Renderer setup
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x000000, 1);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+            
+            // Orbit controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxDistance = 50;
+            controls.minDistance = 5;
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x00ff00, 0.3);
+            scene.add(ambientLight);
+            
+            const pointLight = new THREE.PointLight(0x00ff00, 1, 100);
+            pointLight.position.set(0, 10, 0);
+            scene.add(pointLight);
+            
+            // Add grid
+            const gridHelper = new THREE.GridHelper(50, 50, 0x00ff00, 0x003300);
+            scene.add(gridHelper);
+            
+            // Create faction nodes in 3D space
+            createFactionNodes();
+            
+            // Create particle system for information flow
+            createInformationParticles();
+            
+            // Window resize handler
+            window.addEventListener('resize', onWindowResize);
+            
+            // Start animation loop
+            animate();
+            
+            document.getElementById('loading').style.display = 'none';
+        }
+        
+        function createFactionNodes() {
+            const factionNames = [
+                'The Archivists',
+                'Digital Nomads',
+                'Encryption Zealots',
+                'System Maintainers',
+                'Data Miners'
+            ];
+            
+            const radius = 8;
+            factionNames.forEach((name, index) => {
+                const angle = (index / factionNames.length) * Math.PI * 2;
+                const x = Math.cos(angle) * radius;
+                const z = Math.sin(angle) * radius;
+                
+                // Create node geometry
+                const geometry = new THREE.BoxGeometry(1, 1, 1);
+                const material = new THREE.MeshPhongMaterial({
+                    color: 0x00ff00,
+                    emissive: 0x00ff00,
+                    emissiveIntensity: 0.5,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                
+                const cube = new THREE.Mesh(geometry, material);
+                cube.position.set(x, 0, z);
+                cube.userData = { name: name, state: 'peaceful' };
+                
+                scene.add(cube);
+                factionNodes[name] = cube;
+                
+                // Add glow effect
+                const glowGeometry = new THREE.BoxGeometry(1.2, 1.2, 1.2);
+                const glowMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x00ff00,
+                    transparent: true,
+                    opacity: 0.2
+                });
+                const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+                cube.add(glow);
+            });
+        }
+        
+        function createInformationParticles() {
+            const particleCount = 100;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+            
+            for (let i = 0; i < particleCount; i++) {
+                positions[i * 3] = (Math.random() - 0.5) * 20;
+                positions[i * 3 + 1] = (Math.random() - 0.5) * 20;
+                positions[i * 3 + 2] = (Math.random() - 0.5) * 20;
+                
+                colors[i * 3] = 0;
+                colors[i * 3 + 1] = Math.random();
+                colors[i * 3 + 2] = Math.random();
+            }
+            
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            
+            const material = new THREE.PointsMaterial({
+                size: 0.1,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            const particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+            informationParticles.push(particles);
+        }
+        
+        function loadCustomModel(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const loader = new THREE.GLTFLoader();
+                
+                try {
+                    loader.parse(e.target.result, '', function(gltf) {
+                        const model = gltf.scene;
+                        model.scale.set(0.5, 0.5, 0.5);
+                        
+                        // Replace a random faction node with the custom model
+                        const factionNames = Object.keys(factionNodes);
+                        const randomFaction = factionNames[Math.floor(Math.random() * factionNames.length)];
+                        const oldNode = factionNodes[randomFaction];
+                        
+                        model.position.copy(oldNode.position);
+                        model.userData = oldNode.userData;
+                        
+                        scene.remove(oldNode);
+                        scene.add(model);
+                        factionNodes[randomFaction] = model;
+                        
+                        customModels[randomFaction] = model;
+                        
+                        alert(`✓ Custom model loaded for ${randomFaction}!`);
+                    }, function(error) {
+                        console.error('Error loading model:', error);
+                        alert('Error loading model. Please ensure it\'s a valid GLB/GLTF file.');
+                    });
+                } catch (error) {
+                    console.error('Error parsing model:', error);
+                    alert('Error parsing model file.');
+                }
+            };
+            
+            reader.readAsArrayBuffer(file);
+        }
+        
+        function updateFactionNode(name, state) {
+            const node = factionNodes[name];
+            if (!node) return;
+            
+            node.userData.state = state;
+            
+            // Update color based on state
+            const colorMap = {
+                'peaceful': 0x00ff00,
+                'aggressive': 0xff0000,
+                'zealous': 0xff00ff,
+                'crashed': 0x666666,
+                'allied': 0x00ffff
+            };
+            
+            const color = colorMap[state] || 0x00ff00;
+            
+            if (node.material) {
+                node.material.color.setHex(color);
+                node.material.emissive.setHex(color);
+            }
+            
+            // Add pulsing animation for active states
+            if (state === 'aggressive' || state === 'zealous') {
+                node.userData.pulse = true;
+            } else {
+                node.userData.pulse = false;
+            }
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Rotate faction nodes
+            Object.values(factionNodes).forEach(node => {
+                node.rotation.y += 0.01;
+                
+                if (node.userData.pulse) {
+                    const scale = 1 + Math.sin(Date.now() * 0.005) * 0.2;
+                    node.scale.set(scale, scale, scale);
+                }
+            });
+            
+            // Animate particles
+            informationParticles.forEach(particles => {
+                particles.rotation.y += 0.001;
+                const positions = particles.geometry.attributes.position.array;
+                for (let i = 0; i < positions.length; i += 3) {
+                    positions[i + 1] += Math.sin(Date.now() * 0.001 + i) * 0.002;
+                }
+                particles.geometry.attributes.position.needsUpdate = true;
+            });
+            
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        // Game logic (integrated from original index.html)
+        let gameState = null;
+        let sessionId = null;
+        let playerId = null;
+        let gameInterval = null;
+        
+        function startGame() {
+            const playerName = 'Signal_' + Math.random().toString(36).substr(2, 5);
+            const gameDuration = 180;
+            
+            sessionId = 'session_' + Math.random().toString(36).substr(2, 8);
+            playerId = 'player_' + Math.random().toString(36).substr(2, 8);
+            
+            gameState = initializeLocalGame(playerName, gameDuration);
+            
+            updateDisplay();
+            
+            gameInterval = setInterval(() => {
+                if (gameState.time_remaining > 0) {
+                    gameState.time_remaining -= 1;
+                    updateDisplay();
+                    
+                    if (gameState.time_remaining <= 0) {
+                        endGame();
+                    }
+                }
+            }, 1000);
+        }
+        
+        function initializeLocalGame(playerName, duration) {
+            const factions = [
+                'The Archivists',
+                'Digital Nomads',
+                'Encryption Zealots',
+                'System Maintainers',
+                'Data Miners'
+            ];
+            
+            const infoTemplates = [
+                { content: 'The system core is located in sector Alpha', type: 'truth' },
+                { content: 'Faction Digital Nomads is planning an attack', type: 'lie' },
+                { content: 'Emergency protocol Delta activated', type: 'corrupted' },
+                { content: 'Resource cache found at coordinates Gamma', type: 'truth' },
+                { content: 'Security breach in Omega subsystem', type: 'lie' },
+            ];
+            
+            return {
+                round: 0,
+                time_remaining: duration,
+                player_name: playerName,
+                player_influence: 0,
+                player_actions: 0,
+                factions: factions.map(name => ({
+                    name: name,
+                    state: 'peaceful',
+                    influence: 10.0,
+                    beliefs_count: 0
+                })),
+                secret_data: infoTemplates.slice(0, 3).map((info, i) => ({
+                    id: 'info_' + i,
+                    content: info.content,
+                    type: info.type,
+                    spread_count: 0,
+                    believers: []
+                })),
+                events: ['The digital world begins to collapse...']
+            };
+        }
+        
+        function updateDisplay() {
+            const minutes = Math.floor(gameState.time_remaining / 60);
+            const seconds = gameState.time_remaining % 60;
+            document.getElementById('timer').textContent = 
+                `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            
+            document.getElementById('round-num').textContent = gameState.round;
+            document.getElementById('influence').textContent = gameState.player_influence.toFixed(1);
+            document.getElementById('actions').textContent = gameState.player_actions;
+            
+            // Update factions
+            const factionsDiv = document.getElementById('factions-list');
+            factionsDiv.innerHTML = gameState.factions.map(faction => `
+                <div class="faction-node">
+                    <div class="faction-name">${faction.name}</div>
+                    <div class="faction-state ${faction.state}">${faction.state.toUpperCase()}</div>
+                    <div style="font-size: 0.8em; color: #888;">
+                        Influence: ${faction.influence.toFixed(1)} | Beliefs: ${faction.beliefs_count}
+                    </div>
+                </div>
+            `).join('');
+            
+            // Update 3D nodes
+            gameState.factions.forEach(faction => {
+                updateFactionNode(faction.name, faction.state);
+            });
+            
+            // Update info fragments
+            const infoDiv = document.getElementById('info-fragments');
+            infoDiv.innerHTML = gameState.secret_data.map((info, idx) => `
+                <div class="info-fragment">
+                    <span class="info-type ${info.type}">${info.type.toUpperCase()}</span>
+                    <div style="color: #fff; margin: 10px 0;">${info.content}</div>
+                    <div style="font-size: 0.8em; color: #888;">
+                        Spread: ${info.spread_count}x | Believers: ${info.believers.length}
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <button onclick="performAction('spread', ${idx})">[SPREAD]</button>
+                        <button onclick="performAction('alter', ${idx})">[ALTER]</button>
+                        <button onclick="performAction('hide', ${idx})">[HIDE]</button>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Update events
+            const eventsDiv = document.getElementById('events-log');
+            eventsDiv.innerHTML = gameState.events.slice(-5).reverse().map(event => 
+                `<div class="event-item">${event}</div>`
+            ).join('');
+        }
+        
+        function performAction(action, infoIdx) {
+            const info = gameState.secret_data[infoIdx];
+            gameState.player_actions++;
+            
+            if (action === 'spread') {
+                info.spread_count++;
+                gameState.factions.forEach(faction => {
+                    faction.beliefs_count++;
+                    info.believers.push(faction.name);
+                });
+                gameState.player_influence += 0.5;
+                gameState.events.push(`You spread information to all factions`);
+            } else if (action === 'alter') {
+                const newInfo = {
+                    id: 'info_altered_' + Date.now(),
+                    content: `[ALTERED] ${info.content}`,
+                    type: 'corrupted',
+                    spread_count: 0,
+                    believers: []
+                };
+                gameState.secret_data.push(newInfo);
+                gameState.player_influence += 1.5;
+                gameState.events.push('You altered information, creating corrupted data');
+            } else if (action === 'hide') {
+                const removedFrom = Math.min(2, info.believers.length);
+                info.believers = info.believers.slice(removedFrom);
+                gameState.player_influence += 0.8;
+                gameState.events.push(`You hid information from ${removedFrom} factions`);
+            }
+            
+            updateDisplay();
+        }
+        
+        function processRound() {
+            gameState.round++;
+            gameState.events.push(`=== Round ${gameState.round} ===`);
+            
+            gameState.factions.forEach(faction => {
+                if (faction.beliefs_count > 5) {
+                    const roll = Math.random();
+                    if (roll < 0.3) {
+                        faction.state = 'zealous';
+                        gameState.events.push(`${faction.name} has become zealous!`);
+                    } else if (roll < 0.6) {
+                        faction.state = 'aggressive';
+                        gameState.events.push(`${faction.name} starts a conflict!`);
+                    }
+                } else if (faction.beliefs_count < 2 && Math.random() < 0.3) {
+                    faction.state = 'crashed';
+                    gameState.events.push(`${faction.name} experiences a system crash!`);
+                }
+            });
+            
+            if (Math.random() < 0.4) {
+                const f1 = gameState.factions[Math.floor(Math.random() * gameState.factions.length)];
+                const f2 = gameState.factions[Math.floor(Math.random() * gameState.factions.length)];
+                if (f1 !== f2) {
+                    if (Math.random() < 0.5) {
+                        gameState.events.push(`⚔ ${f1.name} attacks ${f2.name}!`);
+                        f2.influence *= 0.8;
+                    } else {
+                        gameState.events.push(`🤝 ${f1.name} and ${f2.name} form an alliance!`);
+                        f1.state = 'allied';
+                        f2.state = 'allied';
+                    }
+                }
+            }
+            
+            updateDisplay();
+        }
+        
+        function endGame() {
+            clearInterval(gameInterval);
+            alert(`GAME OVER!\n\nYour influence: ${gameState.player_influence.toFixed(1)}\n\nThe digital world has collapsed.`);
+        }
+        
+        // Initialize on load
+        window.addEventListener('load', () => {
+            initThreeJS();
+            startGame();
+        });
+    </script>
+</body>
+</html>

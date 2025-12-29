@@ -1,0 +1,17 @@
+# Render Deployment Configuration
+
+web:
+  - type: web
+    name: lastsignal-game
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python server_web.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: LASTSIGNAL_AI_ENABLED
+        value: false
+      - key: PORT
+        generateValue: true
