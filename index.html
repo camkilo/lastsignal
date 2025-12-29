@@ -102,8 +102,8 @@
         /* Map Canvas Styles */
         #mapCanvas {
             width: 100%;
-            height: 400px;
-            background: rgba(0, 0, 0, 0.8);
+            height: 500px;
+            background: rgba(0, 10, 20, 0.9);
             border: 2px solid #00ff00;
             border-radius: 8px;
             box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
@@ -329,8 +329,8 @@
 
         <div id="gameArea" style="display: none;">
             <div class="map-section game-section">
-                <h2>Digital Territory Map</h2>
-                <canvas id="mapCanvas" width="1200" height="400"></canvas>
+                <h2>Global Digital Network Map</h2>
+                <canvas id="mapCanvas" width="1200" height="500"></canvas>
             </div>
             
             <div class="game-section">
@@ -404,10 +404,10 @@
             
             mapCtx = mapCanvas.getContext('2d');
             
-            // Position factions in a circular pattern
-            const centerX = mapCanvas.width / 2;
-            const centerY = mapCanvas.height / 2;
-            const radius = 150;
+            // Define continents/regions as geographical areas on the world map
+            // Using world map-inspired layout with 5 major digital regions
+            const width = mapCanvas.width;
+            const height = mapCanvas.height;
             
             const factionNames = [
                 'The Archivists',
@@ -417,42 +417,163 @@
                 'Data Miners'
             ];
             
-            factionNames.forEach((name, index) => {
-                const angle = (index / factionNames.length) * Math.PI * 2 - Math.PI / 2;
-                factionPositions[name] = {
-                    x: centerX + Math.cos(angle) * radius,
-                    y: centerY + Math.sin(angle) * radius,
-                    radius: 30
-                };
-            });
+            // Position factions across the world map like continents
+            // Inspired by real world geography but adapted for digital world
+            factionPositions = {
+                'The Archivists': {
+                    x: width * 0.15,      // Western region (like Americas)
+                    y: height * 0.4,
+                    radius: 35,
+                    continent: 'west'
+                },
+                'Digital Nomads': {
+                    x: width * 0.45,      // Central-North region (like Europe)
+                    y: height * 0.25,
+                    radius: 35,
+                    continent: 'central-north'
+                },
+                'Encryption Zealots': {
+                    x: width * 0.55,      // Central-South region (like Africa)
+                    y: height * 0.65,
+                    radius: 35,
+                    continent: 'central-south'
+                },
+                'System Maintainers': {
+                    x: width * 0.75,      // Eastern region (like Asia)
+                    y: height * 0.35,
+                    radius: 35,
+                    continent: 'east'
+                },
+                'Data Miners': {
+                    x: width * 0.85,      // Far East region (like Oceania)
+                    y: height * 0.60,
+                    radius: 35,
+                    continent: 'far-east'
+                }
+            };
             
             // Start map animation loop
             animateMap();
+        }
+        
+        // Draw continent-like landmasses
+        function drawContinents() {
+            const width = mapCanvas.width;
+            const height = mapCanvas.height;
+            
+            // Draw 5 major continents/regions with organic shapes
+            mapCtx.fillStyle = 'rgba(0, 40, 20, 0.4)';
+            mapCtx.strokeStyle = 'rgba(0, 100, 50, 0.6)';
+            mapCtx.lineWidth = 2;
+            
+            // Western continent (Americas-inspired)
+            mapCtx.beginPath();
+            mapCtx.moveTo(width * 0.05, height * 0.25);
+            mapCtx.quadraticCurveTo(width * 0.08, height * 0.15, width * 0.15, height * 0.20);
+            mapCtx.quadraticCurveTo(width * 0.22, height * 0.18, width * 0.25, height * 0.30);
+            mapCtx.quadraticCurveTo(width * 0.26, height * 0.45, width * 0.23, height * 0.55);
+            mapCtx.quadraticCurveTo(width * 0.20, height * 0.65, width * 0.15, height * 0.70);
+            mapCtx.quadraticCurveTo(width * 0.10, height * 0.68, width * 0.05, height * 0.60);
+            mapCtx.quadraticCurveTo(width * 0.03, height * 0.45, width * 0.05, height * 0.25);
+            mapCtx.closePath();
+            mapCtx.fill();
+            mapCtx.stroke();
+            
+            // Central-North continent (Europe-inspired)
+            mapCtx.beginPath();
+            mapCtx.moveTo(width * 0.35, height * 0.15);
+            mapCtx.quadraticCurveTo(width * 0.42, height * 0.12, width * 0.50, height * 0.18);
+            mapCtx.quadraticCurveTo(width * 0.55, height * 0.25, width * 0.52, height * 0.35);
+            mapCtx.quadraticCurveTo(width * 0.48, height * 0.40, width * 0.42, height * 0.38);
+            mapCtx.quadraticCurveTo(width * 0.36, height * 0.32, width * 0.35, height * 0.15);
+            mapCtx.closePath();
+            mapCtx.fill();
+            mapCtx.stroke();
+            
+            // Central-South continent (Africa-inspired)
+            mapCtx.beginPath();
+            mapCtx.moveTo(width * 0.42, height * 0.42);
+            mapCtx.quadraticCurveTo(width * 0.48, height * 0.45, width * 0.52, height * 0.52);
+            mapCtx.quadraticCurveTo(width * 0.58, height * 0.60, width * 0.60, height * 0.70);
+            mapCtx.quadraticCurveTo(width * 0.58, height * 0.78, width * 0.52, height * 0.80);
+            mapCtx.quadraticCurveTo(width * 0.46, height * 0.78, width * 0.43, height * 0.70);
+            mapCtx.quadraticCurveTo(width * 0.40, height * 0.58, width * 0.42, height * 0.42);
+            mapCtx.closePath();
+            mapCtx.fill();
+            mapCtx.stroke();
+            
+            // Eastern continent (Asia-inspired - largest)
+            mapCtx.beginPath();
+            mapCtx.moveTo(width * 0.62, height * 0.10);
+            mapCtx.quadraticCurveTo(width * 0.72, height * 0.08, width * 0.82, height * 0.15);
+            mapCtx.quadraticCurveTo(width * 0.88, height * 0.22, width * 0.90, height * 0.32);
+            mapCtx.quadraticCurveTo(width * 0.92, height * 0.42, width * 0.88, height * 0.48);
+            mapCtx.quadraticCurveTo(width * 0.82, height * 0.50, width * 0.75, height * 0.48);
+            mapCtx.quadraticCurveTo(width * 0.68, height * 0.45, width * 0.65, height * 0.38);
+            mapCtx.quadraticCurveTo(width * 0.60, height * 0.25, width * 0.62, height * 0.10);
+            mapCtx.closePath();
+            mapCtx.fill();
+            mapCtx.stroke();
+            
+            // Far-East continent (Oceania-inspired)
+            mapCtx.beginPath();
+            mapCtx.moveTo(width * 0.78, height * 0.55);
+            mapCtx.quadraticCurveTo(width * 0.85, height * 0.53, width * 0.92, height * 0.58);
+            mapCtx.quadraticCurveTo(width * 0.95, height * 0.65, width * 0.92, height * 0.72);
+            mapCtx.quadraticCurveTo(width * 0.86, height * 0.75, width * 0.80, height * 0.70);
+            mapCtx.quadraticCurveTo(width * 0.76, height * 0.64, width * 0.78, height * 0.55);
+            mapCtx.closePath();
+            mapCtx.fill();
+            mapCtx.stroke();
+        }
+        
+        // Draw world map grid (latitude/longitude style)
+        function drawWorldGrid() {
+            mapCtx.strokeStyle = 'rgba(0, 255, 0, 0.15)';
+            mapCtx.lineWidth = 1;
+            
+            // Longitude lines (vertical)
+            for (let x = 0; x < mapCanvas.width; x += mapCanvas.width / 12) {
+                mapCtx.beginPath();
+                mapCtx.moveTo(x, 0);
+                mapCtx.lineTo(x, mapCanvas.height);
+                mapCtx.stroke();
+            }
+            
+            // Latitude lines (horizontal) - slightly curved like on real maps
+            for (let y = 0; y < mapCanvas.height; y += mapCanvas.height / 8) {
+                mapCtx.beginPath();
+                mapCtx.moveTo(0, y);
+                // Add slight curve to simulate map projection
+                for (let x = 0; x < mapCanvas.width; x += 20) {
+                    const curve = Math.sin((x / mapCanvas.width) * Math.PI) * 5;
+                    mapCtx.lineTo(x, y + curve);
+                }
+                mapCtx.stroke();
+            }
+            
+            // Draw equator line (center) thicker
+            mapCtx.strokeStyle = 'rgba(0, 255, 0, 0.25)';
+            mapCtx.lineWidth = 2;
+            mapCtx.beginPath();
+            mapCtx.moveTo(0, mapCanvas.height / 2);
+            mapCtx.lineTo(mapCanvas.width, mapCanvas.height / 2);
+            mapCtx.stroke();
         }
         
         // Draw the map
         function drawMap() {
             if (!mapCtx) return;
             
-            // Clear canvas
-            mapCtx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            // Clear canvas with dark ocean background
+            mapCtx.fillStyle = 'rgba(0, 5, 15, 1)';
             mapCtx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
             
-            // Draw grid
-            mapCtx.strokeStyle = 'rgba(0, 255, 0, 0.1)';
-            mapCtx.lineWidth = 1;
-            for (let x = 0; x < mapCanvas.width; x += 50) {
-                mapCtx.beginPath();
-                mapCtx.moveTo(x, 0);
-                mapCtx.lineTo(x, mapCanvas.height);
-                mapCtx.stroke();
-            }
-            for (let y = 0; y < mapCanvas.height; y += 50) {
-                mapCtx.beginPath();
-                mapCtx.moveTo(0, y);
-                mapCtx.lineTo(mapCanvas.width, y);
-                mapCtx.stroke();
-            }
+            // Draw world map-style continents/landmasses
+            drawContinents();
+            
+            // Draw latitude/longitude grid lines (like a real world map)
+            drawWorldGrid();
             
             // Draw connection lines
             connectionLines.forEach(line => {
