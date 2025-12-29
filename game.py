@@ -13,6 +13,17 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 
+# Game configuration constants
+SECTOR_NAMES = ["Alpha", "Beta", "Gamma", "Delta", "Omega"]
+DEFAULT_FACTION_NAMES = [
+    "The Archivists",
+    "Digital Nomads",
+    "Encryption Zealots",
+    "System Maintainers",
+    "Data Miners"
+]
+
+
 class InformationType(Enum):
     """Types of information fragments"""
     TRUTH = "truth"
@@ -144,18 +155,10 @@ class GameEngine:
     def initialize_game(self):
         """Set up the initial game state"""
         # Create NPC factions
-        faction_names = [
-            "The Archivists",
-            "Digital Nomads",
-            "Encryption Zealots",
-            "System Maintainers",
-            "Data Miners"
-        ]
-        
-        for name in faction_names:
+        for name in DEFAULT_FACTION_NAMES:
             self.world_state.factions[name] = NPCFaction(
                 name=name,
-                relationships={other: 0.0 for other in faction_names if other != name}
+                relationships={other: 0.0 for other in DEFAULT_FACTION_NAMES if other != name}
             )
         
         # Generate initial information fragments
@@ -179,7 +182,7 @@ class GameEngine:
         ]
         
         for i, (template, info_type) in enumerate(templates):
-            content = template.format(random.choice(["Alpha", "Beta", "Gamma", "Delta", "Omega"]))
+            content = template.format(random.choice(SECTOR_NAMES))
             fragment = InformationFragment(
                 id=f"info_{i}",
                 content=content,

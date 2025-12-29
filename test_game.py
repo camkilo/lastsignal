@@ -1,5 +1,12 @@
 """
 Tests for LastSignal game mechanics
+
+This test suite covers:
+- Information fragment creation and manipulation
+- NPC faction behavior and belief systems
+- Player actions and influence scoring
+- Game engine initialization and state management
+- Full game flow integration testing
 """
 
 import unittest

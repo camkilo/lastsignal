@@ -195,8 +195,25 @@ def run_cli_game():
     server = GameServer()
     
     # Create a session
-    num_players = int(input("Number of players (1-4): ") or "2")
-    game_duration = float(input("Game duration in seconds (default 180): ") or "180")
+    try:
+        num_players_input = input("Number of players (1-4): ") or "2"
+        num_players = int(num_players_input)
+        if num_players < 1 or num_players > 4:
+            print("Invalid number of players. Using default: 2")
+            num_players = 2
+    except ValueError:
+        print("Invalid input. Using default: 2 players")
+        num_players = 2
+    
+    try:
+        duration_input = input("Game duration in seconds (default 180): ") or "180"
+        game_duration = float(duration_input)
+        if game_duration < 30 or game_duration > 3600:
+            print("Duration must be between 30 and 3600 seconds. Using default: 180")
+            game_duration = 180.0
+    except ValueError:
+        print("Invalid input. Using default: 180 seconds")
+        game_duration = 180.0
     
     session_id = server.create_session(max_players=num_players, game_duration=game_duration)
     print(f"\nSession created: {session_id}")
@@ -265,11 +282,14 @@ def run_cli_game():
                                 factions = list(session.engine.world_state.factions.keys())
                                 for i, f in enumerate(factions):
                                     print(f"  {i+1}. {f}")
-                                target = input("Choice: ").strip()
+                                target = input("Choice (1-{} or Enter for all): ".format(len(factions))).strip()
                                 if target and target.isdigit():
                                     idx = int(target) - 1
                                     if 0 <= idx < len(factions):
                                         target_faction = factions[idx]
+                                    else:
+                                        print(f"Invalid choice. Please enter a number between 1 and {len(factions)}.")
+
                             
                             result = server.process_action(conn_id, {
                                 'action': action,
