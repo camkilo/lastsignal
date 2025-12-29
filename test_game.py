@@ -40,13 +40,20 @@ class TestInformationFragment(unittest.TestCase):
             info_type=InformationType.TRUTH
         )
         
-        altered = original.alter("player_123")
+        # Test with AI disabled to ensure deterministic behavior
+        altered = original.alter("player_123", use_ai=False)
         
         self.assertIn("ALTERED", altered.content)
         self.assertIn("player_123", altered.content)
         self.assertEqual(altered.info_type, InformationType.CORRUPTED)
         self.assertEqual(altered.source_player, "player_123")
         self.assertEqual(altered.altered_count, 1)
+        
+        # Test with AI enabled (will use mock mode in tests)
+        altered_ai = original.alter("player_123", use_ai=True)
+        self.assertIn("player_123", altered_ai.content)
+        self.assertEqual(altered_ai.info_type, InformationType.CORRUPTED)
+
 
 
 class TestNPCFaction(unittest.TestCase):
@@ -87,11 +94,23 @@ class TestNPCFaction(unittest.TestCase):
         faction.beliefs[info.id] = 20.0
         
         world_state = WorldState()
-        result = faction.calculate_action(world_state)
+        
+        # Test with AI disabled for deterministic behavior
+        result = faction.calculate_action(world_state, use_ai=False)
         
         self.assertEqual(faction.state, FactionState.ZEALOUS)
         self.assertIsNotNone(result)
         self.assertIn("zealous", result.lower())
+        
+        # Test with AI enabled (will use mock mode in tests)
+        faction2 = NPCFaction(name="Test Faction 2")
+        faction2.beliefs[info.id] = 20.0
+        result_ai = faction2.calculate_action(world_state, use_ai=True)
+        
+        # With AI, state should still become ZEALOUS due to high belief
+        self.assertEqual(faction2.state, FactionState.ZEALOUS)
+        self.assertIsNotNone(result_ai)
+
 
 
 class TestPlayer(unittest.TestCase):
@@ -296,6 +315,53 @@ class TestIntegration(unittest.TestCase):
         # Get winner
         winner_id = engine.calculate_winner()
         self.assertIn(winner_id, ["p1", "p2"])
+
+
+class TestAIFeatures(unittest.TestCase):
+    """Tests for AI-powered features"""
+    
+    def test_narrative_generation(self):
+        """Test AI-powered narrative generation"""
+        engine = GameEngine()
+        engine.initialize_game()
+        
+        p1 = engine.add_player("p1", "Player1")
+        p2 = engine.add_player("p2", "Player2")
+        
+        # Generate some events
+        info_id = list(engine.world_state.active_information.keys())[0]
+        engine.process_player_action("p1", ActionType.SPREAD, info_id)
+        engine.process_round()
+        
+        # End game
+        engine.world_state.time_remaining = 0
+        
+        # Generate narrative
+        narrative = engine.get_match_narrative()
+        
+        self.assertIn('summary', narrative)
+        self.assertIn('key_moments', narrative)
+        self.assertIn('conclusion', narrative)
+        self.assertIn('full_narrative', narrative)
+        self.assertIsInstance(narrative['summary'], str)
+        self.assertGreater(len(narrative['summary']), 0)
+    
+    def test_truth_reveal(self):
+        """Test AI-powered truth reveal generation"""
+        engine = GameEngine()
+        engine.initialize_game()
+        
+        # Add some game activity
+        p1 = engine.add_player("p1", "Player1")
+        info_id = list(engine.world_state.active_information.keys())[0]
+        engine.process_player_action("p1", ActionType.ALTER, info_id)
+        
+        # Generate truth reveal
+        truth_reveal = engine.get_truth_reveal()
+        
+        self.assertIsInstance(truth_reveal, str)
+        self.assertGreater(len(truth_reveal), 0)
+        self.assertIn("TRUTH", truth_reveal.upper())
 
 
 if __name__ == '__main__':

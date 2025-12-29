@@ -201,6 +201,40 @@ def demo_game():
     
     print_separator()
     
+    # AI-Powered Features Demo
+    print("🤖 AI-POWERED NARRATIVE GENERATION")
+    print_separator()
+    
+    print("Generating match narrative...")
+    narrative = engine.get_match_narrative()
+    
+    print("\n📖 MATCH SUMMARY:")
+    print(narrative['summary'])
+    
+    print("\n🎬 KEY MOMENTS:")
+    print(narrative['key_moments'])
+    
+    print("\n🏆 CONCLUSION:")
+    print(narrative['conclusion'])
+    
+    print_separator()
+    
+    print("🔍 TRUTH REVEAL")
+    print_separator()
+    truth_reveal = engine.get_truth_reveal()
+    print(truth_reveal)
+    
+    print_separator()
+    print("💡 AI Features Status:")
+    print("  • LLM-based information alteration: Active (mock mode)")
+    print("  • ML-based faction decisions: Active (enhanced rules)")
+    print("  • AI narrative generation: Active (template mode)")
+    print("\nTo enable full AI features, set environment variable:")
+    print("  export LASTSIGNAL_AI_ENABLED=true")
+    print("  export OPENAI_API_KEY=your_key_here")
+    
+    print_separator()
+    
     return engine
 
 

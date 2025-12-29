@@ -58,9 +58,35 @@ class InformationFragment:
     altered_count: int = 0
     believers: Set[str] = field(default_factory=set)
     
-    def alter(self, player_id: str) -> 'InformationFragment':
-        """Create an altered version of this information"""
-        altered_content = f"[ALTERED by {player_id}] {self.content}"
+    def alter(self, player_id: str, use_ai: bool = True, context: Optional[Dict] = None) -> 'InformationFragment':
+        """
+        Create an altered version of this information
+        
+        Args:
+            player_id: ID of the player altering the information
+            use_ai: Whether to use LLM for generating contextual variations
+            context: Optional game context for more sophisticated alterations
+        
+        Returns:
+            New InformationFragment with altered content
+        """
+        # Try to use AI engine for sophisticated alteration
+        if use_ai:
+            try:
+                from ai_engine import get_llm_engine
+                llm = get_llm_engine()
+                altered_content = llm.generate_altered_content(
+                    self.content,
+                    self.info_type.value,
+                    player_id,
+                    context
+                )
+            except Exception as e:
+                # Fallback to simple alteration if AI fails
+                altered_content = f"[ALTERED by {player_id}] {self.content}"
+        else:
+            altered_content = f"[ALTERED by {player_id}] {self.content}"
+        
         return InformationFragment(
             id=f"{self.id}_altered_{player_id}",
             content=altered_content,
@@ -84,12 +110,49 @@ class NPCFaction:
         self.beliefs[info_fragment.id] = self.beliefs.get(info_fragment.id, 0) + strength
         info_fragment.believers.add(self.name)
     
-    def calculate_action(self, world_state: 'WorldState') -> Optional[str]:
-        """Decide what action to take based on beliefs"""
+    def calculate_action(self, world_state: 'WorldState', use_ai: bool = True) -> Optional[str]:
+        """
+        Decide what action to take based on beliefs
+        
+        Args:
+            world_state: Current world state for context
+            use_ai: Whether to use ML engine for sophisticated decision-making
+        
+        Returns:
+            Action description string or None
+        """
         if not self.beliefs:
             return None
         
-        # Factions act based on their strongest beliefs
+        # Try to use ML engine for sophisticated decision-making
+        if use_ai:
+            try:
+                from ai_engine import get_ml_engine
+                ml_engine = get_ml_engine()
+                
+                world_context = {
+                    'round_number': world_state.round_number,
+                    'active_factions': len(world_state.factions),
+                    'total_information': len(world_state.active_information),
+                }
+                
+                new_state, action = ml_engine.calculate_sophisticated_action(
+                    self.name,
+                    self.beliefs,
+                    self.relationships,
+                    self.state.value,
+                    world_context
+                )
+                
+                if new_state and action:
+                    self.state = FactionState(new_state)
+                    return action
+                    
+            except Exception as e:
+                # Fallback to rule-based if AI fails
+                pass
+        
+        # Original rule-based logic as fallback
         strongest_belief = max(self.beliefs.items(), key=lambda x: x[1])
         belief_strength = strongest_belief[1]
         
@@ -140,6 +203,87 @@ class WorldState:
     def add_event(self, event: str):
         """Log an event in the world"""
         self.events_log.append(f"[Round {self.round_number}] {event}")
+    
+    def generate_narrative(self, players: Dict[str, 'Player'], winner_id: str, winner_name: str) -> Dict[str, str]:
+        """
+        Generate AI-powered narrative summary of the match
+        
+        Args:
+            players: Dictionary of all players
+            winner_id: ID of the winning player
+            winner_name: Name of the winning player
+        
+        Returns:
+            Dictionary containing narrative sections
+        """
+        try:
+            from ai_engine import get_narrative_engine
+            narrative_engine = get_narrative_engine()
+            
+            # Prepare player data
+            player_data = {
+                pid: {
+                    'name': p.name,
+                    'influence': p.influence_score,
+                    'actions_taken': len(p.actions_taken)
+                }
+                for pid, p in players.items()
+            }
+            
+            # Prepare faction data
+            faction_data = {
+                fname: {
+                    'state': faction.state.value,
+                    'influence': faction.influence_score,
+                    'beliefs_count': len(faction.beliefs)
+                }
+                for fname, faction in self.factions.items()
+            }
+            
+            return narrative_engine.generate_match_narrative(
+                self.events_log,
+                player_data,
+                faction_data,
+                winner_id,
+                winner_name
+            )
+            
+        except Exception as e:
+            # Fallback narrative if AI fails
+            return {
+                'summary': f"In a battle for narrative dominance, {winner_name} emerged victorious.",
+                'key_moments': f"The match featured {len(self.events_log)} critical events.",
+                'conclusion': f"{winner_name}'s version of reality now defines the collapsed world.",
+                'full_narrative': f"Match concluded. Winner: {winner_name}"
+            }
+    
+    def generate_truth_reveal(self) -> str:
+        """
+        Generate AI-powered 'truth reveal' showing what was real vs manipulated
+        
+        Returns:
+            Truth reveal narrative
+        """
+        try:
+            from ai_engine import get_narrative_engine
+            narrative_engine = get_narrative_engine()
+            
+            # Prepare information fragment data
+            fragment_data = {
+                info_id: {
+                    'content': info.content,
+                    'type': info.info_type.value,
+                    'spread_count': info.spread_count,
+                    'believers': len(info.believers)
+                }
+                for info_id, info in self.active_information.items()
+            }
+            
+            return narrative_engine.generate_truth_reveal(self.events_log, fragment_data)
+            
+        except Exception as e:
+            return "=== TRUTH REVEAL ===\n\nThe fog of information warfare clears. Reality solidifies."
+
 
 
 class GameEngine:
@@ -249,7 +393,15 @@ class GameEngine:
     def _alter_information(self, player: Player, info: InformationFragment) -> str:
         """Alter information to create a new version"""
         player.take_action(ActionType.ALTER, info)
-        altered_info = info.alter(player.id)
+        
+        # Prepare context for AI alteration
+        context = {
+            'round': self.world_state.round_number,
+            'factions': [f.name for f in self.world_state.factions.values()],
+            'faction_states': {f.name: f.state.value for f in self.world_state.factions.values()},
+        }
+        
+        altered_info = info.alter(player.id, use_ai=True, context=context)
         self.world_state.active_information[altered_info.id] = altered_info
         player.influence_score += 1.5
         return f"{player.name} altered information, creating {altered_info.id}"
@@ -363,3 +515,25 @@ class GameEngine:
             'active_info_count': len(self.world_state.active_information),
             'events': self.world_state.events_log[-5:]  # Last 5 events
         }
+    
+    def get_match_narrative(self) -> Dict[str, str]:
+        """
+        Generate AI-powered narrative summary of the completed match
+        
+        Returns:
+            Dictionary with narrative sections (summary, key_moments, conclusion, full_narrative)
+        """
+        winner_id = self.calculate_winner()
+        winner = self.players.get(winner_id)
+        winner_name = winner.name if winner else "Unknown"
+        
+        return self.world_state.generate_narrative(self.players, winner_id, winner_name)
+    
+    def get_truth_reveal(self) -> str:
+        """
+        Generate AI-powered truth reveal showing what was real vs manipulated
+        
+        Returns:
+            Truth reveal narrative string
+        """
+        return self.world_state.generate_truth_reveal()

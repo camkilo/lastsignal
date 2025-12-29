@@ -18,6 +18,10 @@ The world ends after a timer runs out. **Whoever's version of reality dominates 
 - **Multiplayer**: Compete against other signals to dominate the narrative.
 - **Time Pressure**: The world is collapsing—make your moves count before time runs out.
 - **Dynamic Events**: Wars, cults, crashes, and alliances emerge from faction beliefs.
+- **🤖 AI-Powered Enhancements**: 
+  - LLM-generated information alterations for infinite misinformation variants
+  - ML-based faction decision making for sophisticated NPC behavior
+  - AI-powered narrative generation for post-match storytelling and truth reveals
 
 ## 🚀 Quick Start
 
@@ -138,6 +142,30 @@ Player with highest **influence score** when timer expires wins. Influence gaine
 - Strategically hiding damaging information
 - Causing faction reactions and events
 
+## 🤖 AI Features
+
+LastSignal includes powerful AI enhancements that create dynamic, emergent gameplay:
+
+### LLM-Based Information Alteration
+Generate contextual, believable misinformation when players use the ALTER action. Works in mock mode by default, or connect to OpenAI for sophisticated variations.
+
+### ML-Based Faction Decisions
+NPC factions make sophisticated decisions based on belief strength, variance, relationships, and game context. Enhanced rule-based AI with support for custom ML models.
+
+### AI-Powered Narratives
+After each match, get:
+- **Match Narrative**: Dramatic 3-act story of what happened
+- **Truth Reveal**: Shows what was real vs manipulated
+
+### Enable Full AI Features
+```bash
+export LASTSIGNAL_AI_ENABLED=true
+export OPENAI_API_KEY=your_openai_api_key
+python3 demo.py
+```
+
+**See [AI_FEATURES.md](AI_FEATURES.md) for complete documentation.**
+
 ## 🧪 Testing
 
 Run the CLI version to test game mechanics:
@@ -151,6 +179,7 @@ Test scenarios:
 2. **Multi-Player**: Test competitive information warfare
 3. **Short Games**: 60-second games for quick testing
 4. **Long Games**: 5+ minute games for strategic depth
+5. **AI Features**: Run `python3 demo.py` to see AI-powered narratives
 
 ## 🎨 Game Strategy Tips
 
@@ -160,17 +189,22 @@ Test scenarios:
 4. **Target Wisely**: Focus on specific factions for maximum impact
 5. **Watch Faction States**: Predict and exploit faction behaviors
 6. **Balance Actions**: Mix spread/alter/hide for varied influence
+7. **Use AI Wisely**: Enable AI features for richer, more unpredictable gameplay
 
 ## 🔮 Future Enhancements
 
+- [x] LLM-based information alteration (infinite misinformation variants)
+- [x] ML-based NPC decision making (adaptive faction behavior)
+- [x] AI-powered narrative generation (post-match storytelling)
 - [ ] Real multiplayer networking (WebSocket support)
 - [ ] More faction types and behaviors
 - [ ] Information decay over time
 - [ ] Player alliances and betrayals
-- [ ] Advanced AI for NPC decision-making
 - [ ] Replay system for strategy analysis
 - [ ] Tournament mode
 - [ ] Custom scenario editor
+- [ ] Voice-based information fragments
+- [ ] Visual misinformation generation
 
 ## 📝 License
 
