@@ -488,13 +488,20 @@
                     };
                     const color = colorMap[faction.state] || '#00ff00';
                     
-                    // Draw glow effect
-                    const gradient = mapCtx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, pos.radius + 10);
-                    gradient.addColorStop(0, color + 'aa');
-                    gradient.addColorStop(1, color + '00');
-                    mapCtx.fillStyle = gradient;
-                    mapCtx.fillRect(pos.x - pos.radius - 10, pos.y - pos.radius - 10, 
-                                    (pos.radius + 10) * 2, (pos.radius + 10) * 2);
+                    // Draw glow effect - parse hex to rgba
+                    const rgb = color.match(/\w\w/g);
+                    if (rgb) {
+                        const r = parseInt(rgb[0], 16);
+                        const g = parseInt(rgb[1], 16);
+                        const b = parseInt(rgb[2], 16);
+                        
+                        const gradient = mapCtx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, pos.radius + 10);
+                        gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.67)`);
+                        gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+                        mapCtx.fillStyle = gradient;
+                        mapCtx.fillRect(pos.x - pos.radius - 10, pos.y - pos.radius - 10, 
+                                        (pos.radius + 10) * 2, (pos.radius + 10) * 2);
+                    }
                     
                     // Draw faction circle
                     mapCtx.fillStyle = color;
@@ -519,39 +526,43 @@
                 });
             }
             
-            // Draw animations
-            mapAnimations.forEach((anim, index) => {
+            // Draw animations - update progress and filter out completed ones
+            mapAnimations = mapAnimations.filter(anim => {
                 if (anim.type === 'spread') {
                     // Draw particle traveling from center to faction
                     const centerX = mapCanvas.width / 2;
                     const centerY = mapCanvas.height / 2;
                     const targetPos = factionPositions[anim.target];
-                    if (!targetPos) return;
+                    if (!targetPos) return false;
                     
                     const x = centerX + (targetPos.x - centerX) * anim.progress;
                     const y = centerY + (targetPos.y - centerY) * anim.progress + Math.sin(anim.progress * Math.PI * 2) * 20;
                     
-                    // Draw trail
-                    mapCtx.strokeStyle = anim.color + '66';
-                    mapCtx.lineWidth = 2;
-                    mapCtx.beginPath();
-                    mapCtx.moveTo(centerX, centerY);
-                    mapCtx.lineTo(x, y);
-                    mapCtx.stroke();
-                    
-                    // Draw particle
-                    const particleGradient = mapCtx.createRadialGradient(x, y, 0, x, y, 10);
-                    particleGradient.addColorStop(0, anim.color);
-                    particleGradient.addColorStop(1, anim.color + '00');
-                    mapCtx.fillStyle = particleGradient;
-                    mapCtx.beginPath();
-                    mapCtx.arc(x, y, 10, 0, Math.PI * 2);
-                    mapCtx.fill();
+                    // Draw trail - use rgba for alpha
+                    const rgb = anim.color.match(/\w\w/g);
+                    if (rgb) {
+                        const r = parseInt(rgb[0], 16);
+                        const g = parseInt(rgb[1], 16);
+                        const b = parseInt(rgb[2], 16);
+                        mapCtx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.4)`;
+                        mapCtx.lineWidth = 2;
+                        mapCtx.beginPath();
+                        mapCtx.moveTo(centerX, centerY);
+                        mapCtx.lineTo(x, y);
+                        mapCtx.stroke();
+                        
+                        // Draw particle
+                        const particleGradient = mapCtx.createRadialGradient(x, y, 0, x, y, 10);
+                        particleGradient.addColorStop(0, anim.color);
+                        particleGradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+                        mapCtx.fillStyle = particleGradient;
+                        mapCtx.beginPath();
+                        mapCtx.arc(x, y, 10, 0, Math.PI * 2);
+                        mapCtx.fill();
+                    }
                     
                     anim.progress += 0.02;
-                    if (anim.progress >= 1) {
-                        mapAnimations.splice(index, 1);
-                    }
+                    return anim.progress < 1;
                 } else if (anim.type === 'alter') {
                     // Draw swirling effect in center
                     const centerX = mapCanvas.width / 2;
@@ -570,9 +581,7 @@
                     }
                     
                     anim.progress += 0.03;
-                    if (anim.progress >= 1) {
-                        mapAnimations.splice(index, 1);
-                    }
+                    return anim.progress < 1;
                 } else if (anim.type === 'hide') {
                     // Draw expanding dark circle in center
                     const centerX = mapCanvas.width / 2;
@@ -586,29 +595,32 @@
                     mapCtx.stroke();
                     
                     anim.progress += 0.04;
-                    if (anim.progress >= 1) {
-                        mapAnimations.splice(index, 1);
-                    }
+                    return anim.progress < 1;
                 } else if (anim.type === 'stateChange') {
                     // Draw expanding ring around faction
                     const pos = factionPositions[anim.faction];
-                    if (!pos) return;
+                    if (!pos) return false;
                     
                     const radius = pos.radius + anim.progress * 40;
-                    mapCtx.strokeStyle = `${anim.color}${Math.floor((1 - anim.progress) * 255).toString(16).padStart(2, '0')}`;
-                    mapCtx.lineWidth = 3;
-                    mapCtx.beginPath();
-                    mapCtx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
-                    mapCtx.stroke();
+                    const rgb = anim.color.match(/\w\w/g);
+                    if (rgb) {
+                        const r = parseInt(rgb[0], 16);
+                        const g = parseInt(rgb[1], 16);
+                        const b = parseInt(rgb[2], 16);
+                        const alpha = (1 - anim.progress);
+                        mapCtx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+                        mapCtx.lineWidth = 3;
+                        mapCtx.beginPath();
+                        mapCtx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
+                        mapCtx.stroke();
+                    }
                     
                     anim.progress += 0.03;
-                    if (anim.progress >= 1) {
-                        mapAnimations.splice(index, 1);
-                    }
+                    return anim.progress < 1;
                 } else if (anim.type === 'crash') {
                     // Draw explosion particles
                     const pos = factionPositions[anim.faction];
-                    if (!pos) return;
+                    if (!pos) return false;
                     
                     anim.particles.forEach(particle => {
                         particle.x += particle.vx;
@@ -622,10 +634,9 @@
                     });
                     
                     anim.progress += 0.02;
-                    if (anim.progress >= 1) {
-                        mapAnimations.splice(index, 1);
-                    }
+                    return anim.progress < 1;
                 }
+                return false;
             });
         }
         
