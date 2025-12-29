@@ -468,6 +468,301 @@
             informationParticles.push(particles);
         }
         
+        // Store active animations
+        let activeAnimations = [];
+        let connectionLines = {};
+        
+        // Animate information spread from center to factions
+        function animateInformationSpread(targetFactions, infoType) {
+            targetFactions.forEach(factionName => {
+                const targetNode = factionNodes[factionName];
+                if (!targetNode) return;
+                
+                // Create particle that travels to the faction
+                const geometry = new THREE.SphereGeometry(0.2, 16, 16);
+                const colorMap = {
+                    'truth': 0x00ff00,
+                    'lie': 0xff0000,
+                    'corrupted': 0xff00ff
+                };
+                const material = new THREE.MeshBasicMaterial({
+                    color: colorMap[infoType] || 0x00ffff,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const particle = new THREE.Mesh(geometry, material);
+                particle.position.set(0, 2, 0); // Start from center
+                scene.add(particle);
+                
+                // Create trail
+                const trailGeometry = new THREE.BufferGeometry();
+                const trailPositions = new Float32Array(300); // 100 points * 3
+                trailGeometry.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3));
+                const trailMaterial = new THREE.LineBasicMaterial({
+                    color: colorMap[infoType] || 0x00ffff,
+                    transparent: true,
+                    opacity: 0.4
+                });
+                const trail = new THREE.Line(trailGeometry, trailMaterial);
+                scene.add(trail);
+                
+                // Animation state
+                const animation = {
+                    particle: particle,
+                    trail: trail,
+                    trailIndex: 0,
+                    start: {x: 0, y: 2, z: 0},
+                    end: targetNode.position.clone(),
+                    progress: 0,
+                    speed: 0.02
+                };
+                
+                activeAnimations.push(animation);
+            });
+        }
+        
+        // Animate ALTER action - create swirling corrupted effect
+        function animateAlter() {
+            const geometry = new THREE.TorusGeometry(3, 0.2, 16, 100);
+            const material = new THREE.MeshBasicMaterial({
+                color: 0xff00ff,
+                transparent: true,
+                opacity: 0.6
+            });
+            const torus = new THREE.Mesh(geometry, material);
+            torus.position.set(0, 1, 0);
+            scene.add(torus);
+            
+            const animation = {
+                type: 'alter',
+                mesh: torus,
+                progress: 0,
+                rotation: 0
+            };
+            activeAnimations.push(animation);
+        }
+        
+        // Animate HIDE action - create fading/dissolving effect
+        function animateHide() {
+            const geometry = new THREE.IcosahedronGeometry(2, 0);
+            const material = new THREE.MeshBasicMaterial({
+                color: 0x000000,
+                transparent: true,
+                opacity: 0.8,
+                wireframe: true
+            });
+            const sphere = new THREE.Mesh(geometry, material);
+            sphere.position.set(0, 1, 0);
+            scene.add(sphere);
+            
+            const animation = {
+                type: 'hide',
+                mesh: sphere,
+                progress: 0
+            };
+            activeAnimations.push(animation);
+        }
+        
+        // Animate faction crash - explosion effect
+        function animateFactionCrash(factionName) {
+            const node = factionNodes[factionName];
+            if (!node) return;
+            
+            // Create explosion particles
+            for (let i = 0; i < 20; i++) {
+                const geometry = new THREE.SphereGeometry(0.1, 8, 8);
+                const material = new THREE.MeshBasicMaterial({
+                    color: 0xff6600,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const particle = new THREE.Mesh(geometry, material);
+                particle.position.copy(node.position);
+                scene.add(particle);
+                
+                const angle = (Math.PI * 2 * i) / 20;
+                const speed = 0.1 + Math.random() * 0.1;
+                const animation = {
+                    type: 'crash',
+                    mesh: particle,
+                    velocity: {
+                        x: Math.cos(angle) * speed,
+                        y: Math.random() * 0.2,
+                        z: Math.sin(angle) * speed
+                    },
+                    progress: 0
+                };
+                activeAnimations.push(animation);
+            }
+        }
+        
+        // Animate faction state change with visual effects
+        function animateFactionStateChange(factionName, newState) {
+            const node = factionNodes[factionName];
+            if (!node) return;
+            
+            // Create a ring that expands from the faction
+            const geometry = new THREE.RingGeometry(0.5, 0.7, 32);
+            const colorMap = {
+                'aggressive': 0xff0000,
+                'zealous': 0xff00ff,
+                'crashed': 0x666666,
+                'allied': 0x00ffff
+            };
+            const material = new THREE.MeshBasicMaterial({
+                color: colorMap[newState] || 0xffff00,
+                transparent: true,
+                opacity: 0.8,
+                side: THREE.DoubleSide
+            });
+            const ring = new THREE.Mesh(geometry, material);
+            ring.position.copy(node.position);
+            ring.rotation.x = Math.PI / 2;
+            scene.add(ring);
+            
+            const animation = {
+                type: 'stateChange',
+                mesh: ring,
+                progress: 0
+            };
+            activeAnimations.push(animation);
+        }
+        
+        // Create connection line between two factions
+        function createConnectionLine(faction1Name, faction2Name, type) {
+            const node1 = factionNodes[faction1Name];
+            const node2 = factionNodes[faction2Name];
+            if (!node1 || !node2) return;
+            
+            const key = `${faction1Name}-${faction2Name}`;
+            
+            // Remove existing connection if any
+            if (connectionLines[key]) {
+                scene.remove(connectionLines[key]);
+            }
+            
+            const points = [
+                node1.position.clone(),
+                node2.position.clone()
+            ];
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            
+            const colorMap = {
+                'alliance': 0x00ffff,
+                'conflict': 0xff0000
+            };
+            
+            const material = new THREE.LineBasicMaterial({
+                color: colorMap[type] || 0xffff00,
+                transparent: true,
+                opacity: 0.6,
+                linewidth: 2
+            });
+            
+            const line = new THREE.Line(geometry, material);
+            line.userData = {
+                faction1: faction1Name,
+                faction2: faction2Name,
+                type: type,
+                pulse: 0
+            };
+            scene.add(line);
+            connectionLines[key] = line;
+        }
+        
+        // Update animations each frame
+        function updateAnimations() {
+            // Update traveling particles
+            activeAnimations = activeAnimations.filter(anim => {
+                if (anim.particle) {
+                    // Update particle position
+                    anim.progress += anim.speed;
+                    if (anim.progress >= 1) {
+                        scene.remove(anim.particle);
+                        scene.remove(anim.trail);
+                        return false; // Remove completed animation
+                    }
+                    
+                    const pos = new THREE.Vector3(
+                        anim.start.x + (anim.end.x - anim.start.x) * anim.progress,
+                        anim.start.y + (anim.end.y - anim.start.y) * anim.progress + Math.sin(anim.progress * Math.PI * 2) * 0.5,
+                        anim.start.z + (anim.end.z - anim.start.z) * anim.progress
+                    );
+                    anim.particle.position.copy(pos);
+                    
+                    // Update trail
+                    const trailPositions = anim.trail.geometry.attributes.position.array;
+                    trailPositions[anim.trailIndex * 3] = pos.x;
+                    trailPositions[anim.trailIndex * 3 + 1] = pos.y;
+                    trailPositions[anim.trailIndex * 3 + 2] = pos.z;
+                    anim.trailIndex = (anim.trailIndex + 1) % 100;
+                    anim.trail.geometry.attributes.position.needsUpdate = true;
+                    
+                    return true;
+                } else if (anim.type === 'alter') {
+                    // Rotate and fade out
+                    anim.progress += 0.02;
+                    anim.rotation += 0.1;
+                    anim.mesh.rotation.x = anim.rotation;
+                    anim.mesh.rotation.y = anim.rotation * 0.7;
+                    anim.mesh.material.opacity = 0.6 * (1 - anim.progress);
+                    
+                    if (anim.progress >= 1) {
+                        scene.remove(anim.mesh);
+                        return false;
+                    }
+                    return true;
+                } else if (anim.type === 'hide') {
+                    // Expand and fade out
+                    anim.progress += 0.03;
+                    const scale = 1 + anim.progress * 2;
+                    anim.mesh.scale.set(scale, scale, scale);
+                    anim.mesh.material.opacity = 0.8 * (1 - anim.progress);
+                    anim.mesh.rotation.x += 0.05;
+                    anim.mesh.rotation.y += 0.08;
+                    
+                    if (anim.progress >= 1) {
+                        scene.remove(anim.mesh);
+                        return false;
+                    }
+                    return true;
+                } else if (anim.type === 'crash') {
+                    // Explosion particles
+                    anim.progress += 0.02;
+                    anim.mesh.position.x += anim.velocity.x;
+                    anim.mesh.position.y += anim.velocity.y;
+                    anim.mesh.position.z += anim.velocity.z;
+                    anim.velocity.y -= 0.01; // Gravity
+                    anim.mesh.material.opacity = 0.8 * (1 - anim.progress);
+                    
+                    if (anim.progress >= 1) {
+                        scene.remove(anim.mesh);
+                        return false;
+                    }
+                    return true;
+                } else if (anim.type === 'stateChange') {
+                    // Expanding ring
+                    anim.progress += 0.03;
+                    const scale = 1 + anim.progress * 3;
+                    anim.mesh.scale.set(scale, scale, 1);
+                    anim.mesh.material.opacity = 0.8 * (1 - anim.progress);
+                    
+                    if (anim.progress >= 1) {
+                        scene.remove(anim.mesh);
+                        return false;
+                    }
+                    return true;
+                }
+                return false;
+            });
+            
+            // Update connection lines
+            Object.values(connectionLines).forEach(line => {
+                line.userData.pulse += 0.05;
+                line.material.opacity = 0.4 + Math.sin(line.userData.pulse) * 0.2;
+            });
+        }
+        
         function loadCustomModel(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -561,6 +856,9 @@
                 }
                 particles.geometry.attributes.position.needsUpdate = true;
             });
+            
+            // Update active animations
+            updateAnimations();
             
             controls.update();
             renderer.render(scene, camera);
@@ -698,12 +996,17 @@
             
             if (action === 'spread') {
                 info.spread_count++;
+                const targets = [];
                 gameState.factions.forEach(faction => {
                     faction.beliefs_count++;
                     info.believers.push(faction.name);
+                    targets.push(faction.name);
                 });
                 gameState.player_influence += 0.5;
                 gameState.events.push(`You spread information to all factions`);
+                
+                // Animate information spreading
+                animateInformationSpread(targets, info.type);
             } else if (action === 'alter') {
                 const newInfo = {
                     id: 'info_altered_' + Date.now(),
@@ -715,11 +1018,17 @@
                 gameState.secret_data.push(newInfo);
                 gameState.player_influence += 1.5;
                 gameState.events.push('You altered information, creating corrupted data');
+                
+                // Animate alter action
+                animateAlter();
             } else if (action === 'hide') {
                 const removedFrom = Math.min(2, info.believers.length);
                 info.believers = info.believers.slice(removedFrom);
                 gameState.player_influence += 0.8;
                 gameState.events.push(`You hid information from ${removedFrom} factions`);
+                
+                // Animate hide action
+                animateHide();
             }
             
             updateDisplay();
@@ -730,18 +1039,29 @@
             gameState.events.push(`=== Round ${gameState.round} ===`);
             
             gameState.factions.forEach(faction => {
+                const previousState = faction.state;
                 if (faction.beliefs_count > 5) {
                     const roll = Math.random();
                     if (roll < 0.3) {
                         faction.state = 'zealous';
                         gameState.events.push(`${faction.name} has become zealous!`);
+                        if (previousState !== 'zealous') {
+                            animateFactionStateChange(faction.name, 'zealous');
+                        }
                     } else if (roll < 0.6) {
                         faction.state = 'aggressive';
                         gameState.events.push(`${faction.name} starts a conflict!`);
+                        if (previousState !== 'aggressive') {
+                            animateFactionStateChange(faction.name, 'aggressive');
+                        }
                     }
                 } else if (faction.beliefs_count < 2 && Math.random() < 0.3) {
                     faction.state = 'crashed';
                     gameState.events.push(`${faction.name} experiences a system crash!`);
+                    if (previousState !== 'crashed') {
+                        animateFactionCrash(faction.name);
+                        animateFactionStateChange(faction.name, 'crashed');
+                    }
                 }
             });
             
@@ -752,10 +1072,22 @@
                     if (Math.random() < 0.5) {
                         gameState.events.push(`⚔ ${f1.name} attacks ${f2.name}!`);
                         f2.influence *= 0.8;
+                        // Create conflict connection line
+                        createConnectionLine(f1.name, f2.name, 'conflict');
                     } else {
                         gameState.events.push(`🤝 ${f1.name} and ${f2.name} form an alliance!`);
+                        const prevState1 = f1.state;
+                        const prevState2 = f2.state;
                         f1.state = 'allied';
                         f2.state = 'allied';
+                        if (prevState1 !== 'allied') {
+                            animateFactionStateChange(f1.name, 'allied');
+                        }
+                        if (prevState2 !== 'allied') {
+                            animateFactionStateChange(f2.name, 'allied');
+                        }
+                        // Create alliance connection line
+                        createConnectionLine(f1.name, f2.name, 'alliance');
                     }
                 }
             }

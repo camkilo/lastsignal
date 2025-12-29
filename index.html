@@ -99,6 +99,40 @@
         .faction-state.crashed { color: #666666; }
         .faction-state.allied { color: #00ffff; }
         
+        /* Map Canvas Styles */
+        #mapCanvas {
+            width: 100%;
+            height: 400px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+        }
+        
+        .map-section {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        
+        /* Animation classes */
+        @keyframes spreadPulse {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+        
+        @keyframes stateChange {
+            0%, 100% { box-shadow: 0 0 15px rgba(0, 255, 0, 0.2); }
+            50% { box-shadow: 0 0 30px rgba(255, 255, 0, 0.8); }
+        }
+        
+        .faction.animating {
+            animation: stateChange 1s ease-in-out;
+        }
+        
+        .info-fragment.spreading {
+            animation: spreadPulse 0.8s ease-out;
+        }
+        
         .info-fragment {
             background: rgba(0, 0, 50, 0.5);
             border: 1px solid #0088ff;
@@ -294,6 +328,11 @@
         </div>
 
         <div id="gameArea" style="display: none;">
+            <div class="map-section game-section">
+                <h2>Digital Territory Map</h2>
+                <canvas id="mapCanvas" width="1200" height="400"></canvas>
+            </div>
+            
             <div class="game-section">
                 <div class="grid">
                     <div class="player-status">
@@ -350,6 +389,339 @@
         let playerId = null;
         let gameInterval = null;
         let selectedTarget = null;
+        
+        // Map visualization variables
+        let mapCanvas = null;
+        let mapCtx = null;
+        let factionPositions = {};
+        let mapAnimations = [];
+        let connectionLines = [];
+        
+        // Initialize map canvas
+        function initializeMap() {
+            mapCanvas = document.getElementById('mapCanvas');
+            if (!mapCanvas) return;
+            
+            mapCtx = mapCanvas.getContext('2d');
+            
+            // Position factions in a circular pattern
+            const centerX = mapCanvas.width / 2;
+            const centerY = mapCanvas.height / 2;
+            const radius = 150;
+            
+            const factionNames = [
+                'The Archivists',
+                'Digital Nomads',
+                'Encryption Zealots',
+                'System Maintainers',
+                'Data Miners'
+            ];
+            
+            factionNames.forEach((name, index) => {
+                const angle = (index / factionNames.length) * Math.PI * 2 - Math.PI / 2;
+                factionPositions[name] = {
+                    x: centerX + Math.cos(angle) * radius,
+                    y: centerY + Math.sin(angle) * radius,
+                    radius: 30
+                };
+            });
+            
+            // Start map animation loop
+            animateMap();
+        }
+        
+        // Draw the map
+        function drawMap() {
+            if (!mapCtx) return;
+            
+            // Clear canvas
+            mapCtx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            mapCtx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
+            
+            // Draw grid
+            mapCtx.strokeStyle = 'rgba(0, 255, 0, 0.1)';
+            mapCtx.lineWidth = 1;
+            for (let x = 0; x < mapCanvas.width; x += 50) {
+                mapCtx.beginPath();
+                mapCtx.moveTo(x, 0);
+                mapCtx.lineTo(x, mapCanvas.height);
+                mapCtx.stroke();
+            }
+            for (let y = 0; y < mapCanvas.height; y += 50) {
+                mapCtx.beginPath();
+                mapCtx.moveTo(0, y);
+                mapCtx.lineTo(mapCanvas.width, y);
+                mapCtx.stroke();
+            }
+            
+            // Draw connection lines
+            connectionLines.forEach(line => {
+                const pos1 = factionPositions[line.faction1];
+                const pos2 = factionPositions[line.faction2];
+                if (!pos1 || !pos2) return;
+                
+                mapCtx.strokeStyle = line.type === 'alliance' ? 
+                    `rgba(0, 255, 255, ${0.4 + Math.sin(line.pulse) * 0.2})` : 
+                    `rgba(255, 0, 0, ${0.4 + Math.sin(line.pulse) * 0.2})`;
+                mapCtx.lineWidth = 3;
+                mapCtx.beginPath();
+                mapCtx.moveTo(pos1.x, pos1.y);
+                mapCtx.lineTo(pos2.x, pos2.y);
+                mapCtx.stroke();
+                
+                line.pulse += 0.1;
+            });
+            
+            // Draw factions
+            if (gameState && gameState.factions) {
+                gameState.factions.forEach(faction => {
+                    const pos = factionPositions[faction.name];
+                    if (!pos) return;
+                    
+                    // Get faction color based on state
+                    const colorMap = {
+                        'peaceful': '#00ff00',
+                        'aggressive': '#ff0000',
+                        'zealous': '#ff00ff',
+                        'crashed': '#666666',
+                        'allied': '#00ffff'
+                    };
+                    const color = colorMap[faction.state] || '#00ff00';
+                    
+                    // Draw glow effect
+                    const gradient = mapCtx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, pos.radius + 10);
+                    gradient.addColorStop(0, color + 'aa');
+                    gradient.addColorStop(1, color + '00');
+                    mapCtx.fillStyle = gradient;
+                    mapCtx.fillRect(pos.x - pos.radius - 10, pos.y - pos.radius - 10, 
+                                    (pos.radius + 10) * 2, (pos.radius + 10) * 2);
+                    
+                    // Draw faction circle
+                    mapCtx.fillStyle = color;
+                    mapCtx.beginPath();
+                    mapCtx.arc(pos.x, pos.y, pos.radius, 0, Math.PI * 2);
+                    mapCtx.fill();
+                    
+                    // Draw faction border
+                    mapCtx.strokeStyle = color;
+                    mapCtx.lineWidth = 2;
+                    mapCtx.stroke();
+                    
+                    // Draw faction name
+                    mapCtx.fillStyle = '#000';
+                    mapCtx.font = 'bold 12px Courier New';
+                    mapCtx.textAlign = 'center';
+                    mapCtx.textBaseline = 'middle';
+                    const words = faction.name.split(' ');
+                    words.forEach((word, i) => {
+                        mapCtx.fillText(word, pos.x, pos.y - 5 + i * 12);
+                    });
+                });
+            }
+            
+            // Draw animations
+            mapAnimations.forEach((anim, index) => {
+                if (anim.type === 'spread') {
+                    // Draw particle traveling from center to faction
+                    const centerX = mapCanvas.width / 2;
+                    const centerY = mapCanvas.height / 2;
+                    const targetPos = factionPositions[anim.target];
+                    if (!targetPos) return;
+                    
+                    const x = centerX + (targetPos.x - centerX) * anim.progress;
+                    const y = centerY + (targetPos.y - centerY) * anim.progress + Math.sin(anim.progress * Math.PI * 2) * 20;
+                    
+                    // Draw trail
+                    mapCtx.strokeStyle = anim.color + '66';
+                    mapCtx.lineWidth = 2;
+                    mapCtx.beginPath();
+                    mapCtx.moveTo(centerX, centerY);
+                    mapCtx.lineTo(x, y);
+                    mapCtx.stroke();
+                    
+                    // Draw particle
+                    const particleGradient = mapCtx.createRadialGradient(x, y, 0, x, y, 10);
+                    particleGradient.addColorStop(0, anim.color);
+                    particleGradient.addColorStop(1, anim.color + '00');
+                    mapCtx.fillStyle = particleGradient;
+                    mapCtx.beginPath();
+                    mapCtx.arc(x, y, 10, 0, Math.PI * 2);
+                    mapCtx.fill();
+                    
+                    anim.progress += 0.02;
+                    if (anim.progress >= 1) {
+                        mapAnimations.splice(index, 1);
+                    }
+                } else if (anim.type === 'alter') {
+                    // Draw swirling effect in center
+                    const centerX = mapCanvas.width / 2;
+                    const centerY = mapCanvas.height / 2;
+                    
+                    for (let i = 0; i < 3; i++) {
+                        const angle = anim.progress * Math.PI * 4 + i * (Math.PI * 2 / 3);
+                        const radius = 50 + anim.progress * 30;
+                        const x = centerX + Math.cos(angle) * radius;
+                        const y = centerY + Math.sin(angle) * radius;
+                        
+                        mapCtx.fillStyle = `rgba(255, 0, 255, ${0.6 * (1 - anim.progress)})`;
+                        mapCtx.beginPath();
+                        mapCtx.arc(x, y, 8, 0, Math.PI * 2);
+                        mapCtx.fill();
+                    }
+                    
+                    anim.progress += 0.03;
+                    if (anim.progress >= 1) {
+                        mapAnimations.splice(index, 1);
+                    }
+                } else if (anim.type === 'hide') {
+                    // Draw expanding dark circle in center
+                    const centerX = mapCanvas.width / 2;
+                    const centerY = mapCanvas.height / 2;
+                    const radius = anim.progress * 60;
+                    
+                    mapCtx.strokeStyle = `rgba(0, 0, 0, ${0.8 * (1 - anim.progress)})`;
+                    mapCtx.lineWidth = 3;
+                    mapCtx.beginPath();
+                    mapCtx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                    mapCtx.stroke();
+                    
+                    anim.progress += 0.04;
+                    if (anim.progress >= 1) {
+                        mapAnimations.splice(index, 1);
+                    }
+                } else if (anim.type === 'stateChange') {
+                    // Draw expanding ring around faction
+                    const pos = factionPositions[anim.faction];
+                    if (!pos) return;
+                    
+                    const radius = pos.radius + anim.progress * 40;
+                    mapCtx.strokeStyle = `${anim.color}${Math.floor((1 - anim.progress) * 255).toString(16).padStart(2, '0')}`;
+                    mapCtx.lineWidth = 3;
+                    mapCtx.beginPath();
+                    mapCtx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
+                    mapCtx.stroke();
+                    
+                    anim.progress += 0.03;
+                    if (anim.progress >= 1) {
+                        mapAnimations.splice(index, 1);
+                    }
+                } else if (anim.type === 'crash') {
+                    // Draw explosion particles
+                    const pos = factionPositions[anim.faction];
+                    if (!pos) return;
+                    
+                    anim.particles.forEach(particle => {
+                        particle.x += particle.vx;
+                        particle.y += particle.vy;
+                        particle.vy += 0.5; // Gravity
+                        
+                        mapCtx.fillStyle = `rgba(255, 102, 0, ${0.8 * (1 - anim.progress)})`;
+                        mapCtx.beginPath();
+                        mapCtx.arc(particle.x, particle.y, 4, 0, Math.PI * 2);
+                        mapCtx.fill();
+                    });
+                    
+                    anim.progress += 0.02;
+                    if (anim.progress >= 1) {
+                        mapAnimations.splice(index, 1);
+                    }
+                }
+            });
+        }
+        
+        // Animation loop for map
+        function animateMap() {
+            drawMap();
+            requestAnimationFrame(animateMap);
+        }
+        
+        // Add map animation functions
+        function addSpreadAnimation(targetFactions, infoType) {
+            const colorMap = {
+                'truth': '#00ff00',
+                'lie': '#ff0000',
+                'corrupted': '#ff00ff'
+            };
+            const color = colorMap[infoType] || '#00ffff';
+            
+            targetFactions.forEach(factionName => {
+                mapAnimations.push({
+                    type: 'spread',
+                    target: factionName,
+                    color: color,
+                    progress: 0
+                });
+            });
+        }
+        
+        function addAlterAnimation() {
+            mapAnimations.push({
+                type: 'alter',
+                progress: 0
+            });
+        }
+        
+        function addHideAnimation() {
+            mapAnimations.push({
+                type: 'hide',
+                progress: 0
+            });
+        }
+        
+        function addStateChangeAnimation(factionName, state) {
+            const colorMap = {
+                'aggressive': '#ff0000',
+                'zealous': '#ff00ff',
+                'crashed': '#666666',
+                'allied': '#00ffff'
+            };
+            
+            mapAnimations.push({
+                type: 'stateChange',
+                faction: factionName,
+                color: colorMap[state] || '#ffff00',
+                progress: 0
+            });
+        }
+        
+        function addCrashAnimation(factionName) {
+            const pos = factionPositions[factionName];
+            if (!pos) return;
+            
+            const particles = [];
+            for (let i = 0; i < 15; i++) {
+                const angle = (Math.PI * 2 * i) / 15;
+                const speed = 2 + Math.random() * 3;
+                particles.push({
+                    x: pos.x,
+                    y: pos.y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - Math.random() * 2
+                });
+            }
+            
+            mapAnimations.push({
+                type: 'crash',
+                faction: factionName,
+                particles: particles,
+                progress: 0
+            });
+        }
+        
+        function addConnectionLine(faction1, faction2, type) {
+            // Remove existing connection if any
+            connectionLines = connectionLines.filter(line => 
+                !(line.faction1 === faction1 && line.faction2 === faction2) &&
+                !(line.faction1 === faction2 && line.faction2 === faction1)
+            );
+            
+            connectionLines.push({
+                faction1: faction1,
+                faction2: faction2,
+                type: type,
+                pulse: 0
+            });
+        }
 
         async function startGame() {
             const playerName = document.getElementById('playerName').value || 'Signal_' + Math.random().toString(36).substr(2, 5);
@@ -365,6 +737,9 @@
             document.getElementById('playerName_display').textContent = playerName;
             document.getElementById('setupModal').style.display = 'none';
             document.getElementById('gameArea').style.display = 'block';
+
+            // Initialize map visualization
+            initializeMap();
 
             updateDisplay();
             
@@ -506,21 +881,28 @@
 
             if (action === 'spread') {
                 info.spread_count++;
+                const targets = [];
                 if (target) {
                     const faction = gameState.factions.find(f => f.name === target);
                     if (faction) {
                         faction.beliefs_count++;
                         info.believers.push(target);
                         gameState.player_influence += 1.0;
+                        targets.push(target);
                     }
                 } else {
                     gameState.factions.forEach(faction => {
                         faction.beliefs_count++;
                         info.believers.push(faction.name);
+                        targets.push(faction.name);
                     });
                     gameState.player_influence += 0.5;
                 }
                 gameState.events.push(`You spread information to ${target || 'all factions'}`);
+                
+                // Add spread animation
+                addSpreadAnimation(targets, info.type);
+                
             } else if (action === 'alter') {
                 const newInfo = {
                     id: 'info_altered_' + Date.now(),
@@ -532,11 +914,18 @@
                 gameState.secret_data.push(newInfo);
                 gameState.player_influence += 1.5;
                 gameState.events.push('You altered information, creating corrupted data');
+                
+                // Add alter animation
+                addAlterAnimation();
+                
             } else if (action === 'hide') {
                 const removedFrom = Math.min(2, info.believers.length);
                 info.believers = info.believers.slice(removedFrom);
                 gameState.player_influence += 0.8;
                 gameState.events.push(`You hid information from ${removedFrom} factions`);
+                
+                // Add hide animation
+                addHideAnimation();
             }
 
             updateDisplay();
@@ -548,18 +937,29 @@
 
             // NPCs react based on beliefs
             gameState.factions.forEach(faction => {
+                const previousState = faction.state;
                 if (faction.beliefs_count > 5) {
                     const roll = Math.random();
                     if (roll < 0.3) {
                         faction.state = 'zealous';
                         gameState.events.push(`${faction.name} has become zealous! Forms a cult around their beliefs.`);
+                        if (previousState !== 'zealous') {
+                            addStateChangeAnimation(faction.name, 'zealous');
+                        }
                     } else if (roll < 0.6) {
                         faction.state = 'aggressive';
                         gameState.events.push(`${faction.name} starts a conflict with neighboring factions!`);
+                        if (previousState !== 'aggressive') {
+                            addStateChangeAnimation(faction.name, 'aggressive');
+                        }
                     }
                 } else if (faction.beliefs_count < 2 && Math.random() < 0.3) {
                     faction.state = 'crashed';
                     gameState.events.push(`${faction.name} experiences a system crash from conflicting information!`);
+                    if (previousState !== 'crashed') {
+                        addCrashAnimation(faction.name);
+                        addStateChangeAnimation(faction.name, 'crashed');
+                    }
                 }
             });
 
@@ -571,10 +971,20 @@
                     if (Math.random() < 0.5) {
                         gameState.events.push(`⚔ ${f1.name} attacks ${f2.name}!`);
                         f2.influence *= 0.8;
+                        addConnectionLine(f1.name, f2.name, 'conflict');
                     } else {
                         gameState.events.push(`🤝 ${f1.name} and ${f2.name} form an alliance!`);
+                        const prevState1 = f1.state;
+                        const prevState2 = f2.state;
                         f1.state = 'allied';
                         f2.state = 'allied';
+                        if (prevState1 !== 'allied') {
+                            addStateChangeAnimation(f1.name, 'allied');
+                        }
+                        if (prevState2 !== 'allied') {
+                            addStateChangeAnimation(f2.name, 'allied');
+                        }
+                        addConnectionLine(f1.name, f2.name, 'alliance');
                     }
                 }
             }
