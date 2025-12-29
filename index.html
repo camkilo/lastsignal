@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LastSignal - Digital Reality Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            color: #00ff00;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+            background: rgba(0, 255, 0, 0.05);
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+        }
+        
+        h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px #00ff00;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .subtitle {
+            color: #00cc00;
+            font-size: 1.2em;
+            margin-top: 10px;
+        }
+        
+        .game-section {
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #00ff00;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.2);
+        }
+        
+        .game-section h2 {
+            color: #00ff00;
+            margin-bottom: 15px;
+            text-decoration: underline;
+        }
+        
+        .timer {
+            font-size: 2em;
+            text-align: center;
+            color: #ff0000;
+            text-shadow: 0 0 10px #ff0000;
+            margin: 20px 0;
+        }
+        
+        .faction {
+            background: rgba(0, 50, 0, 0.5);
+            border: 1px solid #00cc00;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        
+        .faction-name {
+            font-weight: bold;
+            font-size: 1.2em;
+            color: #00ff00;
+        }
+        
+        .faction-state {
+            color: #ffff00;
+            margin: 5px 0;
+        }
+        
+        .faction-state.aggressive { color: #ff0000; }
+        .faction-state.zealous { color: #ff00ff; }
+        .faction-state.crashed { color: #666666; }
+        .faction-state.allied { color: #00ffff; }
+        
+        .info-fragment {
+            background: rgba(0, 0, 50, 0.5);
+            border: 1px solid #0088ff;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            position: relative;
+        }
+        
+        .info-type {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            margin-bottom: 5px;
+        }
+        
+        .info-type.truth { background: #00ff00; color: #000; }
+        .info-type.lie { background: #ff0000; color: #fff; }
+        .info-type.corrupted { background: #ff00ff; color: #fff; }
+        
+        .info-content {
+            color: #ffffff;
+            margin: 10px 0;
+            font-size: 1.1em;
+        }
+        
+        .info-stats {
+            color: #888888;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        button {
+            background: rgba(0, 255, 0, 0.2);
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            padding: 10px 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 1em;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: rgba(0, 255, 0, 0.4);
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+        }
+        
+        button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        
+        button.alter { border-color: #ffff00; color: #ffff00; }
+        button.alter:hover { background: rgba(255, 255, 0, 0.2); box-shadow: 0 0 15px rgba(255, 255, 0, 0.5); }
+        
+        button.hide { border-color: #ff0000; color: #ff0000; }
+        button.hide:hover { background: rgba(255, 0, 0, 0.2); box-shadow: 0 0 15px rgba(255, 0, 0, 0.5); }
+        
+        .player-status {
+            background: rgba(0, 100, 100, 0.3);
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #00ffff;
+        }
+        
+        .influence-score {
+            font-size: 2em;
+            color: #00ffff;
+            text-shadow: 0 0 10px #00ffff;
+        }
+        
+        .event-log {
+            max-height: 200px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #00ff00;
+        }
+        
+        .event-log div {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #00ff00;
+            padding-left: 10px;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .target-selector {
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        
+        .target-selector select {
+            background: rgba(0, 0, 0, 0.8);
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 8px;
+            font-family: 'Courier New', monospace;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: #0a0a0a;
+            border: 3px solid #00ff00;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 500px;
+            text-align: center;
+        }
+        
+        .input-group {
+            margin: 15px 0;
+        }
+        
+        .input-group input {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 1em;
+            width: 100%;
+            border-radius: 5px;
+        }
+        
+        #gameOver {
+            font-size: 3em;
+            color: #ff0000;
+            text-shadow: 0 0 20px #ff0000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>LASTSIGNAL</h1>
+            <p class="subtitle">You are an invisible AI signal in a collapsing digital world</p>
+            <p class="subtitle">Control information. Dominate reality.</p>
+        </header>
+
+        <div id="setupModal" class="modal" style="display: flex;">
+            <div class="modal-content">
+                <h2>Initialize Signal</h2>
+                <div class="input-group">
+                    <input type="text" id="playerName" placeholder="Enter your signal name..." value="Signal_Alpha">
+                </div>
+                <div class="input-group">
+                    <label>Game Duration (seconds):</label>
+                    <input type="number" id="gameDuration" value="180" min="60" max="600">
+                </div>
+                <button onclick="startGame()" style="width: 100%; font-size: 1.2em;">
+                    [INITIALIZE]
+                </button>
+            </div>
+        </div>
+
+        <div id="gameArea" style="display: none;">
+            <div class="game-section">
+                <div class="grid">
+                    <div class="player-status">
+                        <h3>Your Signal Status</h3>
+                        <p>Name: <span id="playerName_display"></span></p>
+                        <p>Influence: <span class="influence-score" id="playerInfluence">0.0</span></p>
+                        <p>Actions Taken: <span id="playerActions">0</span></p>
+                    </div>
+                    <div>
+                        <h3>System Status</h3>
+                        <p>Round: <span id="roundNumber">0</span></p>
+                        <div class="timer" id="timer">00:00</div>
+                        <button onclick="processRound()" style="width: 100%;">
+                            [PROCESS ROUND]
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="game-section">
+                <h2>Your Secret Data Fragments</h2>
+                <div id="secretData"></div>
+            </div>
+
+            <div class="grid">
+                <div class="game-section">
+                    <h2>NPC Factions</h2>
+                    <div id="factions"></div>
+                </div>
+
+                <div class="game-section">
+                    <h2>Event Log</h2>
+                    <div class="event-log" id="eventLog"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="gameOverModal" class="modal">
+            <div class="modal-content">
+                <h2 id="gameOver">REALITY COLLAPSED</h2>
+                <h3 style="margin: 20px 0;">Winner: <span id="winnerName"></span></h3>
+                <p>Final Influence: <span id="winnerInfluence"></span></p>
+                <p style="margin-top: 20px;">The dominant version of reality has been established.</p>
+                <button onclick="location.reload()" style="margin-top: 20px;">
+                    [NEW SIMULATION]
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let gameState = null;
+        let sessionId = null;
+        let playerId = null;
+        let gameInterval = null;
+        let selectedTarget = null;
+
+        async function startGame() {
+            const playerName = document.getElementById('playerName').value || 'Signal_' + Math.random().toString(36).substr(2, 5);
+            const gameDuration = parseInt(document.getElementById('gameDuration').value) || 180;
+
+            // Simulate game initialization (in real implementation, this would call the server)
+            sessionId = 'session_' + Math.random().toString(36).substr(2, 8);
+            playerId = 'player_' + Math.random().toString(36).substr(2, 8);
+
+            // Initialize local game state
+            gameState = initializeLocalGame(playerName, gameDuration);
+
+            document.getElementById('playerName_display').textContent = playerName;
+            document.getElementById('setupModal').style.display = 'none';
+            document.getElementById('gameArea').style.display = 'block';
+
+            updateDisplay();
+            
+            // Start timer
+            gameInterval = setInterval(() => {
+                if (gameState.time_remaining > 0) {
+                    gameState.time_remaining -= 1;
+                    updateDisplay();
+                    
+                    if (gameState.time_remaining <= 0) {
+                        endGame();
+                    }
+                }
+            }, 1000);
+        }
+
+        function initializeLocalGame(playerName, duration) {
+            const factions = [
+                'The Archivists',
+                'Digital Nomads',
+                'Encryption Zealots',
+                'System Maintainers',
+                'Data Miners'
+            ];
+
+            const infoTemplates = [
+                { content: 'The system core is located in sector Alpha', type: 'truth' },
+                { content: 'Faction Digital Nomads is planning an attack', type: 'lie' },
+                { content: 'Emergency protocol Delta activated', type: 'corrupted' },
+                { content: 'Resource cache found at coordinates Gamma', type: 'truth' },
+                { content: 'Security breach in Omega subsystem', type: 'lie' },
+            ];
+
+            return {
+                round: 0,
+                time_remaining: duration,
+                player_name: playerName,
+                player_influence: 0,
+                player_actions: 0,
+                factions: factions.map(name => ({
+                    name: name,
+                    state: 'peaceful',
+                    influence: 10.0,
+                    beliefs_count: 0
+                })),
+                secret_data: infoTemplates.slice(0, 3).map((info, i) => ({
+                    id: 'info_' + i,
+                    content: info.content,
+                    type: info.type,
+                    spread_count: 0,
+                    believers: []
+                })),
+                events: ['The digital world begins to collapse...']
+            };
+        }
+
+        function updateDisplay() {
+            // Update timer
+            const minutes = Math.floor(gameState.time_remaining / 60);
+            const seconds = gameState.time_remaining % 60;
+            document.getElementById('timer').textContent = 
+                `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            
+            // Update player stats
+            document.getElementById('roundNumber').textContent = gameState.round;
+            document.getElementById('playerInfluence').textContent = gameState.player_influence.toFixed(1);
+            document.getElementById('playerActions').textContent = gameState.player_actions;
+
+            // Update secret data
+            const secretDataDiv = document.getElementById('secretData');
+            secretDataDiv.innerHTML = gameState.secret_data.map((info, idx) => `
+                <div class="info-fragment" id="info_${idx}">
+                    <span class="info-type ${info.type}">${info.type.toUpperCase()}</span>
+                    <div class="info-content">${info.content}</div>
+                    <div class="info-stats">
+                        Spread: ${info.spread_count}x | Believers: ${info.believers.length}
+                        ${info.believers.length > 0 ? ' (' + info.believers.join(', ') + ')' : ''}
+                    </div>
+                    <div class="action-buttons">
+                        <button onclick="prepareAction('spread', ${idx})">
+                            [SPREAD]
+                        </button>
+                        <button class="alter" onclick="performAction('alter', ${idx})">
+                            [ALTER]
+                        </button>
+                        <button class="hide" onclick="performAction('hide', ${idx})">
+                            [HIDE]
+                        </button>
+                    </div>
+                    <div id="target_${idx}" class="target-selector" style="display: none;">
+                        <label>Select Target Faction:</label>
+                        <select id="targetSelect_${idx}">
+                            <option value="">ALL FACTIONS</option>
+                            ${gameState.factions.map(f => `<option value="${f.name}">${f.name}</option>`).join('')}
+                        </select>
+                        <button onclick="performSpread(${idx})" style="margin-top: 10px; width: 100%;">
+                            [CONFIRM SPREAD]
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+
+            // Update factions
+            const factionsDiv = document.getElementById('factions');
+            factionsDiv.innerHTML = gameState.factions.map(faction => `
+                <div class="faction">
+                    <div class="faction-name">${faction.name}</div>
+                    <div class="faction-state ${faction.state}">State: ${faction.state.toUpperCase()}</div>
+                    <div>Influence: ${faction.influence.toFixed(1)}</div>
+                    <div>Beliefs: ${faction.beliefs_count}</div>
+                </div>
+            `).join('');
+
+            // Update event log
+            const eventLogDiv = document.getElementById('eventLog');
+            eventLogDiv.innerHTML = gameState.events.slice(-10).reverse().map(event => 
+                `<div>${event}</div>`
+            ).join('');
+            eventLogDiv.scrollTop = 0;
+        }
+
+        function prepareAction(action, infoIdx) {
+            if (action === 'spread') {
+                const targetDiv = document.getElementById(`target_${infoIdx}`);
+                targetDiv.style.display = targetDiv.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+
+        function performSpread(infoIdx) {
+            const targetSelect = document.getElementById(`targetSelect_${infoIdx}`);
+            const target = targetSelect.value;
+            performAction('spread', infoIdx, target);
+            document.getElementById(`target_${infoIdx}`).style.display = 'none';
+        }
+
+        function performAction(action, infoIdx, target = null) {
+            const info = gameState.secret_data[infoIdx];
+            gameState.player_actions++;
+
+            if (action === 'spread') {
+                info.spread_count++;
+                if (target) {
+                    const faction = gameState.factions.find(f => f.name === target);
+                    if (faction) {
+                        faction.beliefs_count++;
+                        info.believers.push(target);
+                        gameState.player_influence += 1.0;
+                    }
+                } else {
+                    gameState.factions.forEach(faction => {
+                        faction.beliefs_count++;
+                        info.believers.push(faction.name);
+                    });
+                    gameState.player_influence += 0.5;
+                }
+                gameState.events.push(`You spread information to ${target || 'all factions'}`);
+            } else if (action === 'alter') {
+                const newInfo = {
+                    id: 'info_altered_' + Date.now(),
+                    content: `[ALTERED] ${info.content}`,
+                    type: 'corrupted',
+                    spread_count: 0,
+                    believers: []
+                };
+                gameState.secret_data.push(newInfo);
+                gameState.player_influence += 1.5;
+                gameState.events.push('You altered information, creating corrupted data');
+            } else if (action === 'hide') {
+                const removedFrom = Math.min(2, info.believers.length);
+                info.believers = info.believers.slice(removedFrom);
+                gameState.player_influence += 0.8;
+                gameState.events.push(`You hid information from ${removedFrom} factions`);
+            }
+
+            updateDisplay();
+        }
+
+        function processRound() {
+            gameState.round++;
+            gameState.events.push(`=== Round ${gameState.round} ===`);
+
+            // NPCs react based on beliefs
+            gameState.factions.forEach(faction => {
+                if (faction.beliefs_count > 5) {
+                    const roll = Math.random();
+                    if (roll < 0.3) {
+                        faction.state = 'zealous';
+                        gameState.events.push(`${faction.name} has become zealous! Forms a cult around their beliefs.`);
+                    } else if (roll < 0.6) {
+                        faction.state = 'aggressive';
+                        gameState.events.push(`${faction.name} starts a conflict with neighboring factions!`);
+                    }
+                } else if (faction.beliefs_count < 2 && Math.random() < 0.3) {
+                    faction.state = 'crashed';
+                    gameState.events.push(`${faction.name} experiences a system crash from conflicting information!`);
+                }
+            });
+
+            // Random faction interactions
+            if (Math.random() < 0.4) {
+                const f1 = gameState.factions[Math.floor(Math.random() * gameState.factions.length)];
+                const f2 = gameState.factions[Math.floor(Math.random() * gameState.factions.length)];
+                if (f1 !== f2) {
+                    if (Math.random() < 0.5) {
+                        gameState.events.push(`⚔ ${f1.name} attacks ${f2.name}!`);
+                        f2.influence *= 0.8;
+                    } else {
+                        gameState.events.push(`🤝 ${f1.name} and ${f2.name} form an alliance!`);
+                        f1.state = 'allied';
+                        f2.state = 'allied';
+                    }
+                }
+            }
+
+            updateDisplay();
+        }
+
+        function endGame() {
+            clearInterval(gameInterval);
+            
+            document.getElementById('winnerName').textContent = gameState.player_name;
+            document.getElementById('winnerInfluence').textContent = gameState.player_influence.toFixed(1);
+            document.getElementById('gameOverModal').style.display = 'flex';
+        }
+    </script>
+</body>
+</html>
